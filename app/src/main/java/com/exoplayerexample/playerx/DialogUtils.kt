@@ -4,11 +4,15 @@ import android.app.Dialog
 import android.content.Context
 import android.widget.RadioButton
 import android.widget.RadioGroup
+import androidx.core.view.get
+import java.util.*
+import kotlin.collections.ArrayList
 
 object DialogUtils {
 
     private var mLanguageDialog: Dialog? = null
     private var mSubtitleDialog: Dialog? = null
+    private var mVideoQualityDialog: Dialog? = null
     private var mPlaybackSpeedDialog: Dialog? = null
 
     fun createLanguageDialog(
@@ -42,6 +46,23 @@ object DialogUtils {
         }
     }
 
+    fun createVideoQualityDialog(
+        context: Context,
+        videoQualityHashMap: TreeMap<String, VideoTrackInfo>
+    ) {
+        mVideoQualityDialog = Dialog(context)
+        mVideoQualityDialog?.setContentView(R.layout.dialog_player_video_quality)
+        val radioGroup = mVideoQualityDialog?.findViewById<RadioGroup>(R.id.rg_video_quality)
+        videoQualityHashMap.values.forEachIndexed { index, videoTrackInfo ->
+            val radioButton = RadioButton(context)
+            radioButton.text = videoTrackInfo.name
+            radioButton.id = index
+            radioButton.contentDescription = videoTrackInfo.valueForSort
+            radioGroup?.addView(radioButton)
+        }
+        radioGroup?.check(0)
+    }
+
     fun showLanguageDialog(
         languages: ArrayList<String>,
         playerSettingChangeListener: IPlayerSettingChange
@@ -68,6 +89,20 @@ object DialogUtils {
         mSubtitleDialog?.show()
     }
 
+    fun showVideoQualityDialog(
+        playerSettingChangeListener: IPlayerSettingChange,
+        videoQualityHashMap: TreeMap<String, VideoTrackInfo>
+    ) {
+        val radioGroup = mVideoQualityDialog?.findViewById<RadioGroup>(R.id.rg_video_quality)
+        radioGroup?.setOnCheckedChangeListener { _, i ->
+            val radioButton = radioGroup[i]
+            radioGroup.check(i)
+            playerSettingChangeListener.onVideoQualityChanged(videoQualityHashMap[radioButton.contentDescription])
+            mVideoQualityDialog?.dismiss()
+        }
+        mVideoQualityDialog?.show()
+    }
+
     fun showPlaybackSpeedDialog(
         context: Context,
         playerSettingChangeListener: IPlayerSettingChange
@@ -84,7 +119,7 @@ object DialogUtils {
                 radioButton.text.length - 1
             )
             radioGroup.check(i)
-            playerSettingChangeListener.onPlaybackSpeedChanged(speed.toString() + "F")
+            playerSettingChangeListener.onPlaybackSpeedChanged(speed + "F")
             mPlaybackSpeedDialog?.dismiss()
         }
         mPlaybackSpeedDialog?.show()

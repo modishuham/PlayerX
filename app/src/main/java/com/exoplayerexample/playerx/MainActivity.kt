@@ -43,11 +43,9 @@ class MainActivity : AppCompatActivity(), IPlayerSettingChange {
         setContentView(R.layout.activity_main)
         playerView = findViewById(R.id.player)
         findViewById<ImageView>(R.id.iv_quality).setOnClickListener {
-            PlayerUtils.changeVideoQuality(
-                this,
-                "Quality0",
-                trackSelector
-            )
+            if (!PlayerUtils.getAvailableVideoQualities().isNullOrEmpty()) {
+                DialogUtils.showVideoQualityDialog(this, PlayerUtils.getAvailableVideoQualities()!!)
+            }
         }
         findViewById<ImageView>(R.id.iv_audio).setOnClickListener {
             DialogUtils.showLanguageDialog(languagesList, this)
@@ -70,7 +68,7 @@ class MainActivity : AppCompatActivity(), IPlayerSettingChange {
         findViewById<ConstraintLayout>(R.id.exo_double_tap_increment).setOnClickListener {
             exoPlayer?.let {
                 it.seekTo(it.currentPosition + 20000)
-                Log.e("Sound",""+exoPlayer?.volume)
+                Log.e("Sound", "" + exoPlayer?.volume)
             }
         }
 
@@ -93,7 +91,7 @@ class MainActivity : AppCompatActivity(), IPlayerSettingChange {
                 setParameters(buildUponParameters().setMaxVideoSizeSd())
             }
             val mediaItem =
-                PlayerUtils.getMediaItemFromUrl(hlsUrl, subTitleExample, MimeTypes.TEXT_VTT)
+                PlayerUtils.getMediaItemFromUrl(dashUrl, subTitleExample, MimeTypes.TEXT_VTT)
                     ?: return
             exoPlayer = SimpleExoPlayer.Builder(this)
                 .setTrackSelector(trackSelector!!)
@@ -150,12 +148,17 @@ class MainActivity : AppCompatActivity(), IPlayerSettingChange {
 
     private fun playbackStateListener() = object : Player.Listener {
         override fun onPlaybackStateChanged(playbackState: Int) {
-            val stateString: String = when (playbackState) {
-                ExoPlayer.STATE_IDLE -> "ExoPlayer.STATE_IDLE-"
-                ExoPlayer.STATE_BUFFERING -> "ExoPlayer.STATE_BUFFERING-"
-                ExoPlayer.STATE_READY -> "ExoPlayer.STATE_READY-"
-                ExoPlayer.STATE_ENDED -> "ExoPlayer.STATE_ENDED-"
-                else -> "UNKNOWN_STATE-"
+            when (playbackState) {
+                ExoPlayer.STATE_IDLE -> {
+                }
+                ExoPlayer.STATE_BUFFERING -> {
+                }
+                ExoPlayer.STATE_READY -> {
+                }
+                ExoPlayer.STATE_ENDED -> {
+                }
+                else -> {
+                }
             }
         }
 
@@ -165,7 +168,6 @@ class MainActivity : AppCompatActivity(), IPlayerSettingChange {
         ) {
             super.onTracksChanged(trackGroups, trackSelections)
             Log.e("ExoPlayer - ", "onTrackChangedCall")
-            PlayerUtils.initVideoQualities(exoPlayer, trackSelector)
             if (languagesList.isEmpty()) {
                 languagesList = PlayerUtils.getAvailableAudioFormat(trackGroups)
                 if (languagesList.isNotEmpty()) {
@@ -176,13 +178,22 @@ class MainActivity : AppCompatActivity(), IPlayerSettingChange {
                             languagesList[0]
                         )
                     }
-                } else {
-
                 }
             }
             if (subtitleList.isEmpty()) {
                 subtitleList = PlayerUtils.getAvailableSubtitle(trackGroups)
                 DialogUtils.createSubtitleDialog(this@MainActivity, subtitleList)
+            }
+            if (PlayerUtils.getAvailableVideoQualities() == null) {
+                PlayerUtils.initVideoQualities(exoPlayer, trackSelector)
+                if (PlayerUtils.getAvailableVideoQualities() != null && PlayerUtils.getAvailableVideoQualities()!!
+                        .isNotEmpty()
+                ) {
+                    DialogUtils.createVideoQualityDialog(
+                        this@MainActivity,
+                        PlayerUtils.getAvailableVideoQualities()!!
+                    )
+                }
             }
         }
     }
@@ -203,6 +214,16 @@ class MainActivity : AppCompatActivity(), IPlayerSettingChange {
             PlayerUtils.changeMediaSubtitle(
                 trackSelector,
                 languageCode
+            )
+        }
+    }
+
+    override fun onVideoQualityChanged(videoTrackInfo: VideoTrackInfo?) {
+        videoTrackInfo?.let {
+            PlayerUtils.changeVideoQuality(
+                this,
+                videoTrackInfo,
+                trackSelector
             )
         }
     }

@@ -5,4 +5,5 @@ class VideoTrackInfo {
     var bitrate: Long = 0
     var groupIndex = 0
     var trackIndex = 0
+    var valueForSort: String? = null
 }

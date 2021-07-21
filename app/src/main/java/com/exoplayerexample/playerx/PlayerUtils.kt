@@ -13,12 +13,14 @@ import com.google.android.exoplayer2.trackselection.MappingTrackSelector
 import com.google.android.exoplayer2.util.Log
 import com.google.android.exoplayer2.util.MimeTypes
 import com.google.android.exoplayer2.util.Util
+import java.util.*
+import kotlin.collections.ArrayList
 
 object PlayerUtils {
 
     private var videoRendererIndex: Int = -1
     private var trackGroupArray: TrackGroupArray? = null
-    private var videoTrackInfoHashMap: HashMap<String, VideoTrackInfo>? = null
+    private var videoTrackInfoHashMap: TreeMap<String, VideoTrackInfo>? = null
 
     /*
     * This method change playback speed of exoPlayer
@@ -28,7 +30,7 @@ object PlayerUtils {
         speed: Float = 1.0F,
         exoPlayer: SimpleExoPlayer?
     ) {
-        val playbackParameters: PlaybackParameters = PlaybackParameters(speed)
+        val playbackParameters = PlaybackParameters(speed)
         exoPlayer?.playbackParameters = playbackParameters
     }
 
@@ -120,7 +122,7 @@ object PlayerUtils {
         return languages
     }
 
-    fun getAvailableVideoQualities(): HashMap<String, VideoTrackInfo>? {
+    fun getAvailableVideoQualities(): TreeMap<String, VideoTrackInfo>? {
         return videoTrackInfoHashMap
     }
 
@@ -160,7 +162,7 @@ object PlayerUtils {
         trackGroups: TrackGroupArray?,
         rendererIndex: Int
     ) {
-        videoTrackInfoHashMap = HashMap()
+        videoTrackInfoHashMap = TreeMap()
         for (groupIndex in 0 until trackGroups!!.length) {
             val group = trackGroups[groupIndex]
             for (trackIndex in 0 until group.length) {
@@ -175,78 +177,18 @@ object PlayerUtils {
                     videoTrackInfo.groupIndex = groupIndex
                     videoTrackInfo.trackIndex = trackIndex
                     videoTrackInfo.bitrate = format.bitrate.toLong()
-                    //val availableVideoQuality: VideoQuality = getAvailableVideoQuality()
-                    val bitrateCurrent = (format.bitrate / 1000).toLong()
-                    /*val bitrateArrayList: ArrayList<Bitrate> =
-                        availableVideoQuality.getBitrateArrayList()
-                    val bitrateHigh: Long = bitrateArrayList[1].getBitrate()
-                    val bitrateMid: Long = bitrateArrayList[2].getBitrate()
-                    val bitrateLow: Long = bitrateArrayList[3].getBitrate()
-                    if (bitrateCurrent > bitrateMid) {
-                        //high
-                        if (videoTrackInfoHashMap.get(AppConstant.PLAYER_VIDEO_QUALITY_HIGH) == null) {
-                            videoTrackInfoHashMap.put(
-                                AppConstant.PLAYER_VIDEO_QUALITY_HIGH,
-                                videoTrackInfo
-                            )
-                        } else {
-                            val videoTrackInfo1: VideoTrackInfo =
-                                videoTrackInfoHashMap.get(AppConstant.PLAYER_VIDEO_QUALITY_HIGH)
-                            if (bitrateCurrent > videoTrackInfo1.getBitrate()) {
-                                videoTrackInfoHashMap.put(
-                                    AppConstant.PLAYER_VIDEO_QUALITY_HIGH,
-                                    videoTrackInfo
-                                )
-                            }
-                        }
-                    } else if (bitrateCurrent > bitrateLow) {
-                        //mid
-                        if (videoTrackInfoHashMap.get(AppConstant.PLAYER_VIDEO_QUALITY_MEDIUM) == null) {
-                            videoTrackInfoHashMap.put(
-                                AppConstant.PLAYER_VIDEO_QUALITY_MEDIUM,
-                                videoTrackInfo
-                            )
-                        } else {
-                            val videoTrackInfo1: VideoTrackInfo =
-                                videoTrackInfoHashMap.get(AppConstant.PLAYER_VIDEO_QUALITY_MEDIUM)
-                            if (bitrateCurrent > videoTrackInfo1.getBitrate()) {
-                                videoTrackInfoHashMap.put(
-                                    AppConstant.PLAYER_VIDEO_QUALITY_MEDIUM,
-                                    videoTrackInfo
-                                )
-                            }
-                        }
-                    } else {
-                        //low
-                        if (videoTrackInfoHashMap.get(AppConstant.PLAYER_VIDEO_QUALITY_LOW) == null) {
-                            videoTrackInfoHashMap.put(
-                                AppConstant.PLAYER_VIDEO_QUALITY_LOW,
-                                videoTrackInfo
-                            )
-                        } else {
-                            val videoTrackInfo1: VideoTrackInfo =
-                                videoTrackInfoHashMap.get(AppConstant.PLAYER_VIDEO_QUALITY_LOW)
-                            if (bitrateCurrent > videoTrackInfo1.getBitrate()) {
-                                videoTrackInfoHashMap.put(
-                                    AppConstant.PLAYER_VIDEO_QUALITY_LOW,
-                                    videoTrackInfo
-                                )
-                            }
-                        }
-                    }*/
-                    //if (bitrateCurrent > bitrateHigh) {
-                    videoTrackInfoHashMap?.put(
-                        "Quality$trackIndex",
-                        videoTrackInfo
-                    )
-                    Log.e(
-                        "Quality$trackIndex",
-                        "" + videoTrackInfo.bitrate
-                    )
-                    //}
+                    //val bitrateCurrent = (format.bitrate / 1000).toLong()
+                    getVideoQualityFromBitrate(videoTrackInfo)
                 }
             }
         }
+        if (videoTrackInfoHashMap != null && videoTrackInfoHashMap!!.size > 0) {
+            val videoTrackInfo = VideoTrackInfo()
+            videoTrackInfo.name = "Auto"
+            videoTrackInfo.valueForSort = "A"
+            videoTrackInfoHashMap!![videoTrackInfo.valueForSort.toString()] = videoTrackInfo
+        }
+        Log.e("VideoQualities", "" + videoTrackInfoHashMap!!.toString())
     }
 
 
@@ -255,23 +197,25 @@ object PlayerUtils {
     * */
     fun changeVideoQuality(
         context: Context,
-        quality: String,
+        videoTrackInfo: VideoTrackInfo?,
         trackSelector: DefaultTrackSelector?
     ) {
+        val parametersBuilder = trackSelector?.buildUponParameters()
+        if (videoTrackInfo?.name.equals("Auto", true)) {
+            parametersBuilder?.clearSelectionOverrides(videoRendererIndex)
+            trackSelector?.setParameters(parametersBuilder!!)
+            return
+        }
         var override: DefaultTrackSelector.SelectionOverride? = null
-        val videoTrackInfo = videoTrackInfoHashMap?.get(quality)
         if (videoTrackInfo != null) {
             override = DefaultTrackSelector.SelectionOverride(
                 videoTrackInfo.groupIndex,
                 videoTrackInfo.trackIndex
             )
         }
-        val parametersBuilder = trackSelector?.buildUponParameters()
         if (override != null) {
             trackSelector?.parameters = DefaultTrackSelector.ParametersBuilder(context).build()
             parametersBuilder?.setSelectionOverride(videoRendererIndex, trackGroupArray!!, override)
-        } else {
-            parametersBuilder?.clearSelectionOverrides(videoRendererIndex)
         }
         trackSelector?.setParameters(parametersBuilder!!)
     }
@@ -334,5 +278,49 @@ object PlayerUtils {
             }
         }
         return subTitleList
+    }
+
+    private fun getVideoQualityFromBitrate(videoTrackInfo: VideoTrackInfo) {
+        when (videoTrackInfo.bitrate / 1000) {
+            in 0..300 -> {
+                videoTrackInfo.name = "144p"
+                videoTrackInfo.valueForSort = "B"
+            }
+            in 300..700 -> {
+                videoTrackInfo.name = "240p"
+                videoTrackInfo.valueForSort = "C"
+            }
+            in 400..1000 -> {
+                videoTrackInfo.name = "360p"
+                videoTrackInfo.valueForSort = "D"
+
+            }
+            in 500..2000 -> {
+                videoTrackInfo.name = "480p"
+                videoTrackInfo.valueForSort = "E"
+
+            }
+            in 1500..4000 -> {
+                videoTrackInfo.name = "720p"
+                videoTrackInfo.valueForSort = "F"
+            }
+            in 3000..6000 -> {
+                videoTrackInfo.name = "1080p"
+                videoTrackInfo.valueForSort = "G"
+
+            }
+            in 6000..13000 -> {
+                videoTrackInfo.name = "1440p"
+                videoTrackInfo.valueForSort = "H"
+            }
+            in 13000..34000 -> {
+                videoTrackInfo.name = "4k"
+                videoTrackInfo.valueForSort = "I"
+            }
+        }
+        videoTrackInfoHashMap?.put(
+            videoTrackInfo.valueForSort.toString(),
+            videoTrackInfo
+        )
     }
 }
