@@ -177,7 +177,8 @@ object PlayerUtils {
                     videoTrackInfo.groupIndex = groupIndex
                     videoTrackInfo.trackIndex = trackIndex
                     videoTrackInfo.bitrate = format.bitrate.toLong()
-                    //val bitrateCurrent = (format.bitrate / 1000).toLong()
+                    val bitrateCurrent = (format.bitrate / 1000).toLong()
+                    Log.e("Bitrate", " $bitrateCurrent")
                     getVideoQualityFromBitrate(videoTrackInfo)
                 }
             }
@@ -282,45 +283,59 @@ object PlayerUtils {
 
     private fun getVideoQualityFromBitrate(videoTrackInfo: VideoTrackInfo) {
         when (videoTrackInfo.bitrate / 1000) {
-            in 0..300 -> {
+            in 10..300 -> {
                 videoTrackInfo.name = "144p"
                 videoTrackInfo.valueForSort = "B"
+                putVideoQualitiesInHashMap(videoTrackInfo)
             }
             in 300..700 -> {
                 videoTrackInfo.name = "240p"
                 videoTrackInfo.valueForSort = "C"
+                putVideoQualitiesInHashMap(videoTrackInfo)
             }
             in 400..1000 -> {
                 videoTrackInfo.name = "360p"
                 videoTrackInfo.valueForSort = "D"
+                putVideoQualitiesInHashMap(videoTrackInfo)
 
             }
             in 500..2000 -> {
                 videoTrackInfo.name = "480p"
                 videoTrackInfo.valueForSort = "E"
+                putVideoQualitiesInHashMap(videoTrackInfo)
 
             }
             in 1500..4000 -> {
                 videoTrackInfo.name = "720p"
                 videoTrackInfo.valueForSort = "F"
+                putVideoQualitiesInHashMap(videoTrackInfo)
             }
             in 3000..6000 -> {
                 videoTrackInfo.name = "1080p"
                 videoTrackInfo.valueForSort = "G"
+                putVideoQualitiesInHashMap(videoTrackInfo)
 
             }
             in 6000..13000 -> {
                 videoTrackInfo.name = "1440p"
                 videoTrackInfo.valueForSort = "H"
+                putVideoQualitiesInHashMap(videoTrackInfo)
             }
             in 13000..34000 -> {
                 videoTrackInfo.name = "4k"
                 videoTrackInfo.valueForSort = "I"
+                putVideoQualitiesInHashMap(videoTrackInfo)
             }
         }
-        videoTrackInfoHashMap?.put(
-            videoTrackInfo.valueForSort.toString(),
-            videoTrackInfo
-        )
+
+    }
+
+    private fun putVideoQualitiesInHashMap(videoTrackInfo: VideoTrackInfo) {
+        if (videoTrackInfoHashMap?.contains(videoTrackInfo.valueForSort.toString()) != true) {
+            videoTrackInfoHashMap?.put(
+                videoTrackInfo.valueForSort.toString(),
+                videoTrackInfo
+            )
+        }
     }
 }

@@ -3,6 +3,8 @@ package com.exoplayerexample.playerx
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.widget.ImageView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -16,7 +18,7 @@ import com.google.android.exoplayer2.upstream.DefaultBandwidthMeter
 import com.google.android.exoplayer2.util.Log
 import com.google.android.exoplayer2.util.MimeTypes
 import com.google.android.exoplayer2.util.Util
-import kotlin.collections.ArrayList
+
 
 class MainActivity : AppCompatActivity(), IPlayerSettingChange {
 
@@ -37,6 +39,12 @@ class MainActivity : AppCompatActivity(), IPlayerSettingChange {
     private val playbackStateListener: Player.Listener = playbackStateListener()
     private var languagesList = ArrayList<String>()
     private var subtitleList = ArrayList<String>()
+    private var isDoubleClicked = false
+    private val doubleClickHandler = Handler(Looper.getMainLooper())
+    private val runnable = Runnable {
+        isDoubleClicked = false
+    }
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -66,19 +74,33 @@ class MainActivity : AppCompatActivity(), IPlayerSettingChange {
         }
 
         findViewById<ConstraintLayout>(R.id.exo_double_tap_increment).setOnClickListener {
-            exoPlayer?.let {
-                it.seekTo(it.currentPosition + 20000)
-                Log.e("Sound", "" + exoPlayer?.volume)
+            if (isDoubleClicked) {
+                isDoubleClicked = false
+                doubleClickHandler.removeCallbacks(runnable)
+                exoPlayer?.let {
+                    it.seekTo(it.currentPosition + 20000)
+                    Log.e("Sound", "" + exoPlayer?.volume)
+                }
+            } else {
+                isDoubleClicked = true
+                doubleClickHandler.postDelayed(runnable, 500)
             }
         }
 
         findViewById<ConstraintLayout>(R.id.exo_double_tap_decrement).setOnClickListener {
-            exoPlayer?.let {
-                if (it.currentPosition > 20000) {
-                    it.seekTo(it.currentPosition - 20000)
-                } else {
-                    it.seekTo(0)
+            if (isDoubleClicked) {
+                isDoubleClicked = false
+                doubleClickHandler.removeCallbacks(runnable)
+                exoPlayer?.let {
+                    if (it.currentPosition > 20000) {
+                        it.seekTo(it.currentPosition - 20000)
+                    } else {
+                        it.seekTo(0)
+                    }
                 }
+            } else {
+                isDoubleClicked = true
+                doubleClickHandler.postDelayed(runnable, 500)
             }
         }
 
