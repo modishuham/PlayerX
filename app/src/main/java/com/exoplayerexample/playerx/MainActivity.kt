@@ -10,10 +10,9 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.widget.ConstraintLayout
 import com.google.android.exoplayer2.*
-import com.google.android.exoplayer2.source.TrackGroupArray
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
-import com.google.android.exoplayer2.trackselection.TrackSelectionArray
 import com.google.android.exoplayer2.ui.PlayerView
+import com.google.android.exoplayer2.ui.StyledPlayerView
 import com.google.android.exoplayer2.upstream.DefaultBandwidthMeter
 import com.google.android.exoplayer2.util.Log
 import com.google.android.exoplayer2.util.MimeTypes
@@ -27,11 +26,11 @@ class MainActivity : AppCompatActivity(), IPlayerSettingChange {
     private val dashUrl: String =
         "https://bitmovin-a.akamaihd.net/content/sintel/sintel.mpd"
     private val hlsUrl: String =
-        "https://epiconvod.s.llnwi.net/mmd-video/lmpl_test/ek-din-achanak/stream.ismd/manifest.m3u8?stream=144p;240p;320p;480p;720p;1080p&s=1626181322&e=1627477322&h=172f50dd341d154bfe070cad4d1a336e"
+        "https://assets.afcdn.com/video49/20210722/v_645516.m3u8"
     private val subTitleExample = "https://st2.epicon.in/srt_files/839022827.vtt"
 
     private lateinit var playerView: PlayerView
-    private var exoPlayer: SimpleExoPlayer? = null
+    private var exoPlayer: ExoPlayer? = null
     private var playWhenReady: Boolean = true
     private var currentWindow: Int = 0
     private var playbackPosition: Long = 0
@@ -115,7 +114,7 @@ class MainActivity : AppCompatActivity(), IPlayerSettingChange {
             val mediaItem =
                 PlayerUtils.getMediaItemFromUrl(dashUrl, subTitleExample, MimeTypes.TEXT_VTT)
                     ?: return
-            exoPlayer = SimpleExoPlayer.Builder(this)
+            exoPlayer = ExoPlayer.Builder(this)
                 .setTrackSelector(trackSelector!!)
                 .setBandwidthMeter(DefaultBandwidthMeter.Builder(this).build())
                 .build()
@@ -132,7 +131,7 @@ class MainActivity : AppCompatActivity(), IPlayerSettingChange {
     private fun releasePlayer() {
         exoPlayer?.run {
             playbackPosition = this.currentPosition
-            currentWindow = this.currentWindowIndex
+            currentWindow = this.currentMediaItemIndex
             playWhenReady = this.playWhenReady
             removeListener(playbackStateListener)
             release()
@@ -184,14 +183,11 @@ class MainActivity : AppCompatActivity(), IPlayerSettingChange {
             }
         }
 
-        override fun onTracksChanged(
-            trackGroups: TrackGroupArray,
-            trackSelections: TrackSelectionArray
-        ) {
-            super.onTracksChanged(trackGroups, trackSelections)
+        override fun onTracksChanged(tracks: Tracks) {
             Log.e("ExoPlayer - ", "onTrackChangedCall")
             if (languagesList.isEmpty()) {
-                languagesList = PlayerUtils.getAvailableAudioFormat(trackGroups)
+                //languagesList = PlayerUtils.getAvailableAudioFormat(trackGroups)
+                languagesList = PlayerUtils.getAvailableAudio(exoPlayer!!.currentTracks)
                 if (languagesList.isNotEmpty()) {
                     DialogUtils.createLanguageDialog(this@MainActivity, languagesList)
                     if (trackSelector != null) {
@@ -203,9 +199,11 @@ class MainActivity : AppCompatActivity(), IPlayerSettingChange {
                 }
             }
             if (subtitleList.isEmpty()) {
-                subtitleList = PlayerUtils.getAvailableSubtitle(trackGroups)
+                //subtitleList = PlayerUtils.getAvailableSubtitle(trackGroups)
+                subtitleList = PlayerUtils.getAvailableSubtitles(exoPlayer!!.currentTracks)
                 DialogUtils.createSubtitleDialog(this@MainActivity, subtitleList)
             }
+            PlayerUtils.getAvailableVideoQualities(exoPlayer!!.currentTracks)
             if (PlayerUtils.getAvailableVideoQualities() == null) {
                 PlayerUtils.initVideoQualities(exoPlayer, trackSelector)
                 if (PlayerUtils.getAvailableVideoQualities() != null && PlayerUtils.getAvailableVideoQualities()!!

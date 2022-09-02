@@ -3,18 +3,15 @@ package com.exoplayerexample.playerx
 import android.content.Context
 import android.net.Uri
 import android.text.TextUtils
-import com.google.android.exoplayer2.C
-import com.google.android.exoplayer2.MediaItem
-import com.google.android.exoplayer2.PlaybackParameters
-import com.google.android.exoplayer2.SimpleExoPlayer
+import com.google.android.exoplayer2.*
 import com.google.android.exoplayer2.source.TrackGroupArray
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
 import com.google.android.exoplayer2.trackselection.MappingTrackSelector
 import com.google.android.exoplayer2.util.Log
 import com.google.android.exoplayer2.util.MimeTypes
 import com.google.android.exoplayer2.util.Util
+import com.google.common.collect.ImmutableList
 import java.util.*
-import kotlin.collections.ArrayList
 
 object PlayerUtils {
 
@@ -22,13 +19,37 @@ object PlayerUtils {
     private var trackGroupArray: TrackGroupArray? = null
     private var videoTrackInfoHashMap: TreeMap<String, VideoTrackInfo>? = null
 
+    private val SUPPORTED_TRACK_TYPES: ImmutableList<Int> =
+        ImmutableList.of(C.TRACK_TYPE_VIDEO, C.TRACK_TYPE_AUDIO, C.TRACK_TYPE_TEXT)
+
+    /**
+     * Returns whether a track selection dialog will have content to display if initialized with the
+     * specified [Player].
+     */
+    fun willHaveContent(player: Player): Boolean {
+        return willHaveContent(player.currentTracks)
+    }
+
+    /**
+     * Returns whether a track selection dialog will have content to display if initialized with the
+     * specified [Tracks].
+     */
+    private fun willHaveContent(tracks: Tracks): Boolean {
+        for (trackGroup in tracks.groups) {
+            if (SUPPORTED_TRACK_TYPES.contains(trackGroup.type)) {
+                return true
+            }
+        }
+        return false
+    }
+
     /*
     * This method change playback speed of exoPlayer
     * speed can be any of 1.0F, 1.25F, 1.50F, 1.75F, 2.0F
     * */
     fun changePlaybackSpeed(
         speed: Float = 1.0F,
-        exoPlayer: SimpleExoPlayer?
+        exoPlayer: ExoPlayer?
     ) {
         val playbackParameters = PlaybackParameters(speed)
         exoPlayer?.playbackParameters = playbackParameters
@@ -75,6 +96,7 @@ object PlayerUtils {
     /**
      *  This method used to get available subtitle in adaptive playback url
      */
+    @Deprecated("")
     fun getAvailableSubtitle(trackGroups: TrackGroupArray?): ArrayList<String> {
         val subTitle = ArrayList<String>()
         trackGroups?.let {
@@ -99,6 +121,7 @@ object PlayerUtils {
     /**
      *  This method used to get available audio in adaptive playback url
      */
+    @Deprecated("")
     fun getAvailableAudioFormat(trackGroups: TrackGroupArray?): ArrayList<String> {
         val languages = ArrayList<String>()
         trackGroups?.let {
@@ -122,6 +145,39 @@ object PlayerUtils {
         return languages
     }
 
+    fun getAvailableAudio(currentTracks: Tracks): ArrayList<String> {
+        val audioLanguages = ArrayList<String>()
+        for (trackGroup in currentTracks.groups) {
+            if (trackGroup.type == C.TRACK_TYPE_AUDIO) {
+                audioLanguages.add(trackGroup.getTrackFormat(0).language.toString())
+            }
+        }
+        return audioLanguages
+    }
+
+    fun getAvailableSubtitles(currentTracks: Tracks): ArrayList<String> {
+        val subtitleList = ArrayList<String>()
+        for (trackGroup in currentTracks.groups) {
+            if (trackGroup.type == C.TRACK_TYPE_TEXT) {
+                subtitleList.add(trackGroup.getTrackFormat(0).language.toString())
+            }
+        }
+        return subtitleList
+    }
+
+    fun getAvailableVideoQualities(currentTracks: Tracks): ArrayList<Int> {
+        val qualityList = ArrayList<Int>()
+        for (trackGroup in currentTracks.groups) {
+            if (trackGroup.type == C.TRACK_TYPE_VIDEO) {
+                for (trackIndex in 0 until trackGroup.length) {
+                    qualityList.add(trackGroup.getTrackFormat(trackIndex).bitrate / 1000)
+                }
+            }
+        }
+        Log.e("Shubham________", "" + qualityList.toString())
+        return qualityList
+    }
+
     fun getAvailableVideoQualities(): TreeMap<String, VideoTrackInfo>? {
         return videoTrackInfoHashMap
     }
@@ -130,7 +186,7 @@ object PlayerUtils {
      *  This method used to get available video qualities in adaptive playback url
      */
     fun initVideoQualities(
-        exoPlayer: SimpleExoPlayer?,
+        exoPlayer: ExoPlayer?,
         trackSelector: DefaultTrackSelector?
     ) {
         videoRendererIndex = -1
